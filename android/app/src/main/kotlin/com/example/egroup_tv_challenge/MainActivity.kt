@@ -1,0 +1,6 @@
+package com.example.egroup_tv_challenge
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
+}
