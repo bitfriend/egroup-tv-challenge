@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
+import '../local_storage_manager.dart';
+
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
 
@@ -12,9 +14,9 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  List tvShows = <TvShow>[];
-
+  List<TvShow> tvShows = <TvShow>[];
   bool isLoading = false;
+  List<int> favoriteIds = <int>[];
 
   @override
   void initState() {
@@ -59,12 +61,14 @@ class _HomeState extends State<Home> {
                           ),
                           const Spacer(),
                           TextButton(
-                            onPressed: () => onFavorite(itemIndex),
+                            onPressed: () {
+                              onFavorite(itemIndex);
+                            },
                             style: TextButton.styleFrom(
                               backgroundColor: Colors.black.withOpacity(0.19),
                               shape: const CircleBorder(),
                             ),
-                            child: const Icon(Icons.favorite, color: Colors.white),
+                            child: favoriteIds.contains(tvShows[itemIndex].id) ? const Icon(Icons.favorite, color: Colors.white) : const Icon(Icons.favorite_outline, color: Colors.white),
                           ),
                         ],
                       ),
@@ -90,9 +94,13 @@ class _HomeState extends State<Home> {
           );
   }
 
-  fetchData() async {
+  void fetchData() async {
     setState(() {
       isLoading = true;
+    });
+    final favorites = await LocalStorageManager().readFavorites();
+    setState(() {
+      favoriteIds = favorites;
     });
     final queryParams = {
       'api_key': dotenv.env['API_KEY'],
@@ -112,7 +120,17 @@ class _HomeState extends State<Home> {
     }
   }
 
-  onFavorite(int itemIndex) {}
+  void onFavorite(int itemIndex) async {
+    int id = tvShows[itemIndex].id;
+    setState(() {
+      if (favoriteIds.contains(id)) {
+        favoriteIds.remove(id);
+      } else {
+        favoriteIds.add(id);
+      }
+    });
+    await LocalStorageManager().writeFavorites(favoriteIds);
+  }
 }
 
 class TvShow {
@@ -129,6 +147,7 @@ class TvShow {
   final int vote_count;
   final String name;
   final String original_name;
+  final bool? checked;
 
   const TvShow({
     required this.poster_path,
@@ -144,6 +163,7 @@ class TvShow {
     required this.vote_count,
     required this.name,
     required this.original_name,
+    this.checked,
   });
 
   factory TvShow.fromJson(Map<String, dynamic> json) {
