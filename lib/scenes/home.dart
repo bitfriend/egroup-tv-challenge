@@ -17,6 +17,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  Icon searchIcon = const Icon(Icons.search);
+  Widget searchBar = const Text('TV Shows');
   bool loadingShows = false;
   List<TvShow> tvShows = <TvShow>[];
   List<int> favoriteIds = <int>[];
@@ -27,39 +29,63 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    _fetchData('');
   }
 
   @override
   Widget build(BuildContext context) {
-    return loadingShows
-        ? const Center(
-            child: CircularProgressIndicator(),
-          )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildShowsCarousel(),
-              Container(
-                margin: const EdgeInsets.fromLTRB(29, 35, 29, 29),
-                child: const Text(
-                  'Cast',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(fontSize: 19),
-                ),
-              ),
-              _buildCastsListView(),
-              Container(
-                margin: const EdgeInsets.fromLTRB(29, 35, 29, 29),
-                child: const Text(
-                  'Crew',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(fontSize: 19),
-                ),
-              ),
-              _buildCrewsListView(),
-            ],
-          );
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      appBar: AppBar(
+        title: searchBar,
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            onPressed: _onTitleAction,
+            icon: searchIcon,
+          ),
+        ],
+        centerTitle: true,
+      ),
+      body: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (loadingShows) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 13),
+            child: _buildShowsCarousel(),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 13, horizontal: 29),
+            child: const Text(
+              'Cast',
+              textAlign: TextAlign.left,
+              style: TextStyle(fontSize: 19),
+            ),
+          ),
+          _buildCastsListView(),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 13, horizontal: 29),
+            child: const Text(
+              'Crew',
+              textAlign: TextAlign.left,
+              style: TextStyle(fontSize: 19),
+            ),
+          ),
+          _buildCrewsListView(),
+        ],
+      ),
+    );
   }
 
   Widget _buildShowsCarousel() {
@@ -72,7 +98,7 @@ class _HomeState extends State<Home> {
           child: Stack(
             children: <Widget>[
               Image.network(
-                'https://image.tmdb.org/t/p/w500/' + tvShows[itemIndex].poster_path,
+                'https://image.tmdb.org/t/p/w500' + tvShows[itemIndex].poster_path,
                 fit: BoxFit.cover,
                 width: 206,
               ),
@@ -139,9 +165,9 @@ class _HomeState extends State<Home> {
                 if (casts[index].profile_path != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(15),
-                    child: Image.network('https://image.tmdb.org/t/p/w300/${casts[index].profile_path}', width: 77, height: 77, fit: BoxFit.cover),
+                    child: Image.network('https://image.tmdb.org/t/p/w300${casts[index].profile_path}', width: 77, height: 77, fit: BoxFit.cover),
                   ),
-                if (casts[index].profile_path == null) const Icon(Icons.person),
+                if (casts[index].profile_path == null) const Icon(Icons.person, size: 77),
                 Container(
                   margin: const EdgeInsets.only(top: 13),
                   child: Text(
@@ -176,7 +202,7 @@ class _HomeState extends State<Home> {
                 if (crews[index].profile_path != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(15),
-                    child: Image.network('https://image.tmdb.org/t/p/w300/${crews[index].profile_path}', width: 77, height: 77, fit: BoxFit.cover),
+                    child: Image.network('https://image.tmdb.org/t/p/w300${crews[index].profile_path}', width: 77, height: 77, fit: BoxFit.cover),
                   ),
                 if (crews[index].profile_path == null) const Icon(Icons.person, size: 77),
                 Container(
@@ -198,7 +224,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Future<void> _fetchData() async {
+  Future<void> _fetchData(String searchText) async {
     setState(() {
       loadingShows = true;
     });
@@ -209,7 +235,7 @@ class _HomeState extends State<Home> {
     final queryParams = {
       'api_key': dotenv.env['API_KEY'],
       'include_adult': 'false',
-      'query': 'a'
+      'query': searchText.isEmpty ? 'a' : searchText,
     };
     final uri = Uri.https('api.themoviedb.org', '3/search/tv', queryParams);
     final response = await http.get(uri);
@@ -223,6 +249,41 @@ class _HomeState extends State<Home> {
     } else {
       throw Exception('Failed to load TV shows');
     }
+  }
+
+  void _onTitleAction() {
+    setState(() {
+      if (searchIcon.icon == Icons.search) {
+        searchIcon = const Icon(Icons.cancel);
+        searchBar = ListTile(
+          leading: const Icon(
+            Icons.search,
+            color: Colors.white,
+            size: 28,
+          ),
+          title: TextField(
+            decoration: const InputDecoration(
+              hintText: 'type in show name...',
+              hintStyle: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontStyle: FontStyle.italic,
+              ),
+              border: InputBorder.none,
+            ),
+            style: const TextStyle(
+              color: Colors.white,
+            ),
+            onSubmitted: (String value) {
+              _fetchData(value);
+            },
+          ),
+        );
+      } else {
+        searchIcon = const Icon(Icons.search);
+        searchBar = const Text('TV Shows');
+      }
+    });
   }
 
   Future<void> _onFavorite(int itemIndex) async {
