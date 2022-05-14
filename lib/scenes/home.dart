@@ -5,6 +5,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import '../local_storage_manager.dart';
+import '../models/cast.dart';
+import '../models/crew.dart';
+import '../models/tv_show.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -14,89 +17,190 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  bool loadingShows = false;
   List<TvShow> tvShows = <TvShow>[];
-  bool isLoading = false;
   List<int> favoriteIds = <int>[];
+  bool loadingCredit = false;
+  List<Cast> casts = <Cast>[];
+  List<Crew> crews = <Crew>[];
 
   @override
   void initState() {
     super.initState();
-    fetchData();
+    _fetchData();
   }
 
   @override
   Widget build(BuildContext context) {
-    return isLoading
+    return loadingShows
         ? const Center(
             child: CircularProgressIndicator(),
           )
-        : CarouselSlider.builder(
-            itemCount: tvShows.length,
-            itemBuilder: (BuildContext context, int itemIndex, int pageViewIndex) => Container(
-              margin: const EdgeInsets.all(6.0),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(5.0)),
-                child: Stack(
-                  children: <Widget>[
-                    Image.network(
-                      'https://image.tmdb.org/t/p/w500/' + tvShows[itemIndex].poster_path,
-                      fit: BoxFit.cover,
-                      width: 1000.0,
-                    ),
-                    Positioned(
-                      top: 10.0,
-                      left: 20.0,
-                      right: 20.0,
-                      child: Row(
-                        children: <Widget>[
-                          TextButton.icon(
-                            onPressed: null,
-                            icon: const Icon(Icons.star, color: Colors.white),
-                            label: Text(tvShows[itemIndex].vote_average.toString()),
-                            style: ButtonStyle(
-                              backgroundColor: MaterialStateProperty.all(Colors.black.withOpacity(0.19)),
-                              shape: MaterialStateProperty.all(const StadiumBorder()),
-                              foregroundColor: MaterialStateProperty.all(Colors.white),
-                            ),
-                          ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () {
-                              onFavorite(itemIndex);
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.black.withOpacity(0.19),
-                              shape: const CircleBorder(),
-                            ),
-                            child: favoriteIds.contains(tvShows[itemIndex].id) ? const Icon(Icons.favorite, color: Colors.white) : const Icon(Icons.favorite_outline, color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildShowsCarousel(),
+              Container(
+                margin: const EdgeInsets.fromLTRB(29, 35, 29, 29),
+                child: const Text(
+                  'Cast',
+                  textAlign: TextAlign.left,
+                  style: TextStyle(fontSize: 19),
                 ),
               ),
-            ),
-            options: CarouselOptions(
-              height: 400,
-              aspectRatio: 16 / 9,
-              viewportFraction: 0.8,
-              initialPage: 0,
-              enableInfiniteScroll: true,
-              reverse: false,
-              autoPlay: true,
-              autoPlayInterval: const Duration(seconds: 3),
-              autoPlayAnimationDuration: const Duration(milliseconds: 800),
-              autoPlayCurve: Curves.fastOutSlowIn,
-              enlargeCenterPage: true,
-              scrollDirection: Axis.horizontal,
-            ),
+              _buildCastsListView(),
+              Container(
+                margin: const EdgeInsets.fromLTRB(29, 35, 29, 29),
+                child: const Text(
+                  'Crew',
+                  textAlign: TextAlign.left,
+                  style: TextStyle(fontSize: 19),
+                ),
+              ),
+              _buildCrewsListView(),
+            ],
           );
   }
 
-  void fetchData() async {
+  Widget _buildShowsCarousel() {
+    return CarouselSlider.builder(
+      itemCount: tvShows.length,
+      itemBuilder: (BuildContext context, int itemIndex, int pageViewIndex) => Container(
+        margin: const EdgeInsets.all(6),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.all(Radius.circular(22)),
+          child: Stack(
+            children: <Widget>[
+              Image.network(
+                'https://image.tmdb.org/t/p/w500/' + tvShows[itemIndex].poster_path,
+                fit: BoxFit.cover,
+                width: 206,
+              ),
+              Positioned(
+                top: 10,
+                left: 20,
+                right: 20,
+                child: Row(
+                  children: <Widget>[
+                    TextButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.star, color: Colors.white),
+                      label: Text(tvShows[itemIndex].vote_average.toString()),
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all(Colors.black.withOpacity(0.19)),
+                        shape: MaterialStateProperty.all(const StadiumBorder()),
+                        foregroundColor: MaterialStateProperty.all(Colors.white),
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        _onFavorite(itemIndex);
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.black.withOpacity(0.19),
+                        shape: const CircleBorder(),
+                      ),
+                      child: favoriteIds.contains(tvShows[itemIndex].id) ? const Icon(Icons.favorite, color: Colors.white) : const Icon(Icons.favorite_outline, color: Colors.white),
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+      options: CarouselOptions(
+        height: 260,
+        aspectRatio: 16 / 9,
+        viewportFraction: 0.8,
+        initialPage: 0,
+        enableInfiniteScroll: true,
+        reverse: false,
+        onPageChanged: _onPageChanged,
+        enlargeCenterPage: true,
+        scrollDirection: Axis.horizontal,
+      ),
+    );
+  }
+
+  Widget _buildCastsListView() {
+    return SizedBox(
+      height: 126,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        shrinkWrap: true,
+        itemCount: casts.length,
+        itemBuilder: (BuildContext context, int index) {
+          return SizedBox(
+            width: 77,
+            child: Column(
+              children: [
+                if (casts[index].profile_path != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: Image.network('https://image.tmdb.org/t/p/w300/${casts[index].profile_path}', width: 77, height: 77, fit: BoxFit.cover),
+                  ),
+                if (casts[index].profile_path == null) const Icon(Icons.person),
+                Container(
+                  margin: const EdgeInsets.only(top: 13),
+                  child: Text(
+                    casts[index].name,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.fade,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                )
+              ],
+            ),
+          );
+        },
+        itemExtent: 97,
+        padding: const EdgeInsets.symmetric(horizontal: 19),
+      ),
+    );
+  }
+
+  Widget _buildCrewsListView() {
+    return SizedBox(
+      height: 126,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        shrinkWrap: true,
+        itemCount: crews.length,
+        itemBuilder: (BuildContext context, int index) {
+          return SizedBox(
+            width: 77,
+            child: Column(
+              children: [
+                if (crews[index].profile_path != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: Image.network('https://image.tmdb.org/t/p/w300/${crews[index].profile_path}', width: 77, height: 77, fit: BoxFit.cover),
+                  ),
+                if (crews[index].profile_path == null) const Icon(Icons.person, size: 77),
+                Container(
+                  margin: const EdgeInsets.only(top: 13),
+                  child: Text(
+                    crews[index].name,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.fade,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                )
+              ],
+            ),
+          );
+        },
+        itemExtent: 97,
+        padding: const EdgeInsets.symmetric(horizontal: 19),
+      ),
+    );
+  }
+
+  Future<void> _fetchData() async {
     setState(() {
-      isLoading = true;
+      loadingShows = true;
     });
     final favorites = await LocalStorageManager().readFavorites();
     setState(() {
@@ -113,14 +217,15 @@ class _HomeState extends State<Home> {
       Map<String, dynamic> map = json.decode(response.body);
       tvShows = (map['results'] as List).map((data) => TvShow.fromJson(data)).toList();
       setState(() {
-        isLoading = false;
+        loadingShows = false;
       });
+      await _onPageChanged(0, CarouselPageChangedReason.manual);
     } else {
       throw Exception('Failed to load TV shows');
     }
   }
 
-  void onFavorite(int itemIndex) async {
+  Future<void> _onFavorite(int itemIndex) async {
     int id = tvShows[itemIndex].id;
     setState(() {
       if (favoriteIds.contains(id)) {
@@ -131,56 +236,25 @@ class _HomeState extends State<Home> {
     });
     await LocalStorageManager().writeFavorites(favoriteIds);
   }
-}
 
-class TvShow {
-  final String poster_path;
-  final double popularity;
-  final int id;
-  final String? backdrop_path;
-  final double vote_average;
-  final String overview;
-  final String first_air_date;
-  final List<String> origin_country;
-  final List<int> genre_ids;
-  final String original_language;
-  final int vote_count;
-  final String name;
-  final String original_name;
-  final bool? checked;
-
-  const TvShow({
-    required this.poster_path,
-    required this.popularity,
-    required this.id,
-    this.backdrop_path,
-    required this.vote_average,
-    required this.overview,
-    required this.first_air_date,
-    required this.origin_country,
-    required this.genre_ids,
-    required this.original_language,
-    required this.vote_count,
-    required this.name,
-    required this.original_name,
-    this.checked,
-  });
-
-  factory TvShow.fromJson(Map<String, dynamic> json) {
-    return TvShow(
-      poster_path: json['poster_path'],
-      popularity: json['popularity'],
-      id: json['id'],
-      backdrop_path: json['backdrop_path'],
-      vote_average: json['vote_average'].toDouble(),
-      overview: json['overview'],
-      first_air_date: json['first_air_date'],
-      origin_country: (json['origin_country'] as List<dynamic>).cast<String>(),
-      genre_ids: (json['genre_ids'] as List<dynamic>).cast<int>(),
-      original_language: json['original_language'],
-      vote_count: json['vote_count'],
-      name: json['name'],
-      original_name: json['original_name'],
-    );
+  Future<void> _onPageChanged(int index, CarouselPageChangedReason reason) async {
+    setState(() {
+      loadingCredit = true;
+    });
+    final queryParams = {
+      'api_key': dotenv.env['API_KEY'],
+    };
+    final uri = Uri.https('api.themoviedb.org', '3/tv/${tvShows[index].id}/credits', queryParams);
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      Map<String, dynamic> map = json.decode(response.body);
+      casts = (map['cast'] as List).map((data) => Cast.fromJson(data)).toList();
+      crews = (map['crew'] as List).map((data) => Crew.fromJson(data)).toList();
+      setState(() {
+        loadingCredit = false;
+      });
+    } else {
+      throw Exception('Failed to load credit of TV show');
+    }
   }
 }
