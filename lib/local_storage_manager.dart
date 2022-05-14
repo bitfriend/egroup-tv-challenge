@@ -22,6 +22,9 @@ class LocalStorageManager {
 
   Future<List<int>> readFavorites() async {
     await _storage.ready;
+    if (_storage.getItem('favorites') == null) {
+      return [];
+    }
     return (_storage.getItem('favorites') as List).map((item) => item as int).toList();
   }
 
