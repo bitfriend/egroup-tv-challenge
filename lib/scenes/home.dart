@@ -5,9 +5,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import '../local_storage_manager.dart';
-import '../models/cast.dart';
-import '../models/crew.dart';
-import '../models/tv_show.dart';
+import '../models/home/cast.dart';
+import '../models/home/crew.dart';
+import '../models/home/tv_show.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -107,7 +107,7 @@ class _HomeState extends State<Home> {
                 left: 20,
                 right: 20,
                 child: Row(
-                  children: <Widget>[
+                  children: [
                     TextButton.icon(
                       onPressed: null,
                       icon: const Icon(Icons.star, color: Colors.white),
@@ -240,7 +240,7 @@ class _HomeState extends State<Home> {
     final uri = Uri.https('api.themoviedb.org', '3/search/tv', queryParams);
     final response = await http.get(uri);
     if (response.statusCode == 200) {
-      Map<String, dynamic> map = json.decode(response.body);
+      Map<String, dynamic> map = jsonDecode(response.body);
       tvShows = (map['results'] as List).map((data) => TvShow.fromJson(data)).toList();
       setState(() {
         loadingShows = false;
@@ -308,7 +308,7 @@ class _HomeState extends State<Home> {
     final uri = Uri.https('api.themoviedb.org', '3/tv/${tvShows[index].id}/credits', queryParams);
     final response = await http.get(uri);
     if (response.statusCode == 200) {
-      Map<String, dynamic> map = json.decode(response.body);
+      Map<String, dynamic> map = jsonDecode(response.body);
       casts = (map['cast'] as List).map((data) => Cast.fromJson(data)).toList();
       crews = (map['crew'] as List).map((data) => Crew.fromJson(data)).toList();
       setState(() {
