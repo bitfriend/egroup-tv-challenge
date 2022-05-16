@@ -1,7 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.egroup_tv_challenge">
     <!-- Required to fetch data from the internet. -->
-    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="egroup_tv_challenge"
         android:name="${applicationName}"
