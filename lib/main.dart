@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 
+import './local_storage_manager.dart';
+import './models/favorite_selection.dart';
 import './scenes/favorites.dart';
 import './scenes/home.dart';
 
 Future main() async {
   await dotenv.load(fileName: '.env');
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: FavoriteSelection()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -19,6 +29,12 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   int _currentTabIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,5 +84,12 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
     );
+  }
+
+  Future<void> _loadData() async {
+    final favorites = await LocalStorageManager().readFavorites();
+    WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+      Provider.of<FavoriteSelection>(context, listen: false).ids = favorites;
+    });
   }
 }

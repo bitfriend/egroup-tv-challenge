@@ -1,9 +1,11 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
 import '../local_storage_manager.dart';
+import '../models/favorite_selection.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -17,7 +19,6 @@ class _HomeState extends State<Home> {
   Widget searchBar = const Text('TV Shows');
   bool loadingShows = false;
   List tvShows = [];
-  List<int> favoriteIds = <int>[];
   bool loadingCredit = false;
   List casts = [];
   List crews = [];
@@ -117,13 +118,13 @@ class _HomeState extends State<Home> {
                     const Spacer(),
                     TextButton(
                       onPressed: () {
-                        _onFavorite(itemIndex);
+                        _onFavorite(context, itemIndex);
                       },
                       style: TextButton.styleFrom(
                         backgroundColor: Colors.black.withOpacity(0.19),
                         shape: const CircleBorder(),
                       ),
-                      child: favoriteIds.contains(tvShows[itemIndex]['id']) ? const Icon(Icons.favorite, color: Colors.white) : const Icon(Icons.favorite_outline, color: Colors.white),
+                      child: Provider.of<FavoriteSelection>(context).contains(tvShows[itemIndex]['id']) ? const Icon(Icons.favorite, color: Colors.white) : const Icon(Icons.favorite_outline, color: Colors.white),
                     ),
                   ],
                 ),
@@ -224,10 +225,6 @@ class _HomeState extends State<Home> {
     setState(() {
       loadingShows = true;
     });
-    final favorites = await LocalStorageManager().readFavorites();
-    setState(() {
-      favoriteIds = favorites;
-    });
     final tmdb = TMDB(ApiKeys(dotenv.env['API_KEY']!, dotenv.env['ACCESS_TOKEN']!));
     Map<dynamic, dynamic> map = await tmdb.v3.search.queryTvShows('a');
     tvShows = (map['results'] as List);
@@ -272,16 +269,14 @@ class _HomeState extends State<Home> {
     });
   }
 
-  Future<void> _onFavorite(int itemIndex) async {
+  Future<void> _onFavorite(BuildContext context, int itemIndex) async {
     int id = tvShows[itemIndex]['id'];
-    setState(() {
-      if (favoriteIds.contains(id)) {
-        favoriteIds.remove(id);
-      } else {
-        favoriteIds.add(id);
-      }
-    });
-    await LocalStorageManager().writeFavorites(favoriteIds);
+    if (Provider.of<FavoriteSelection>(context, listen: false).ids.contains(id)) {
+      Provider.of<FavoriteSelection>(context, listen: false).remove(id);
+    } else {
+      Provider.of<FavoriteSelection>(context, listen: false).append(id);
+    }
+    await LocalStorageManager().writeFavorites(Provider.of<FavoriteSelection>(context, listen: false).ids);
   }
 
   Future<void> _onPageChanged(int index, CarouselPageChangedReason reason) async {

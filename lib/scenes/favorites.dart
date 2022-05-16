@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:provider/provider.dart';
 import 'package:tmdb_api/tmdb_api.dart';
 
 import '../local_storage_manager.dart';
+import '../models/favorite_selection.dart';
 
 class Favorites extends StatefulWidget {
   const Favorites({Key? key}) : super(key: key);
@@ -54,7 +56,7 @@ class _FavoritesState extends State<Favorites> {
               children: [
                 SlidableAction(
                   onPressed: (BuildContext ctx) {
-                    _onDelete(itemIndex);
+                    _onDelete(ctx, itemIndex);
                   },
                   backgroundColor: const Color(0xFFFE4A49),
                   foregroundColor: Colors.white,
@@ -69,20 +71,24 @@ class _FavoritesState extends State<Favorites> {
         });
   }
 
-  Future<void> _fetchData() async {
-    setState(() {
-      isLoading = true;
-    });
-    final favorites = await LocalStorageManager().readFavorites();
-    final tmdb = TMDB(ApiKeys(dotenv.env['API_KEY']!, dotenv.env['ACCESS_TOKEN']!));
-    final List shows = [];
-    for (int i = 0; i < favorites.length; i++) {
-      Map<dynamic, dynamic> map = await tmdb.v3.tv.getDetails(favorites[i]);
-      shows.add(map);
-    }
-    setState(() {
-      tvShows = shows;
-      isLoading = false;
+  void _fetchData() {
+    WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+      Provider.of<FavoriteSelection>(context, listen: false).addListener(() async {
+        setState(() {
+          isLoading = true;
+        });
+        var favoriteIds = Provider.of<FavoriteSelection>(context, listen: false).ids;
+        final tmdb = TMDB(ApiKeys(dotenv.env['API_KEY']!, dotenv.env['ACCESS_TOKEN']!));
+        final List shows = [];
+        for (int i = 0; i < favoriteIds.length; i++) {
+          Map<dynamic, dynamic> map = await tmdb.v3.tv.getDetails(favoriteIds[i]);
+          shows.add(map);
+        }
+        setState(() {
+          tvShows = shows;
+          isLoading = false;
+        });
+      });
     });
   }
 
@@ -177,16 +183,12 @@ class _FavoritesState extends State<Favorites> {
     );
   }
 
-  Future<void> _onDelete(int itemIndex) async {
+  Future<void> _onDelete(BuildContext context, int itemIndex) async {
     final int id = tvShows[itemIndex]['id'];
     setState(() {
       tvShows.removeAt(itemIndex);
     });
-    final favorites = await LocalStorageManager().readFavorites();
-    final int n = favorites.indexOf(id);
-    if (n != -1) {
-      favorites.removeAt(n);
-      await LocalStorageManager().writeFavorites(favorites);
-    }
+    Provider.of<FavoriteSelection>(context, listen: false).remove(id);
+    await LocalStorageManager().writeFavorites(Provider.of<FavoriteSelection>(context, listen: false).ids);
   }
 }
