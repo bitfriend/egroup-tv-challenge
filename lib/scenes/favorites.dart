@@ -1,12 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:http/http.dart' as http;
+import 'package:tmdb_api/tmdb_api.dart';
 
 import '../local_storage_manager.dart';
-import '../models/favorites/tv_show.dart';
 
 class Favorites extends StatefulWidget {
   const Favorites({Key? key}) : super(key: key);
@@ -17,7 +15,7 @@ class Favorites extends StatefulWidget {
 
 class _FavoritesState extends State<Favorites> {
   bool isLoading = false;
-  List<TvShow> tvShows = <TvShow>[];
+  List tvShows = [];
 
   @override
   void initState() {
@@ -47,7 +45,7 @@ class _FavoritesState extends State<Favorites> {
         itemCount: tvShows.length,
         itemBuilder: (BuildContext context, int itemIndex) {
           return Slidable(
-            key: ValueKey(tvShows[itemIndex].id),
+            key: ValueKey(tvShows[itemIndex]['id']),
             endActionPane: ActionPane(
               motion: const ScrollMotion(),
               dismissible: DismissiblePane(
@@ -76,19 +74,11 @@ class _FavoritesState extends State<Favorites> {
       isLoading = true;
     });
     final favorites = await LocalStorageManager().readFavorites();
-    final List<TvShow> shows = <TvShow>[];
+    final tmdb = TMDB(ApiKeys(dotenv.env['API_KEY']!, dotenv.env['ACCESS_TOKEN']!));
+    final List shows = [];
     for (int i = 0; i < favorites.length; i++) {
-      final queryParams = {
-        'api_key': dotenv.env['API_KEY'],
-      };
-      final uri = Uri.https('api.themoviedb.org', '3/tv/${favorites[i]}', queryParams);
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        Map<String, dynamic> map = jsonDecode(response.body);
-        shows.add(TvShow.fromJson(map));
-      } else {
-        throw Exception('Failed to load TV shows');
-      }
+      Map<dynamic, dynamic> map = await tmdb.v3.tv.getDetails(favorites[i]);
+      shows.add(map);
     }
     setState(() {
       tvShows = shows;
@@ -96,8 +86,8 @@ class _FavoritesState extends State<Favorites> {
     });
   }
 
-  String _getRunTime(TvShow tvShow) {
-    int sum = tvShow.episode_run_time.reduce((a, b) => a + b);
+  String _getRunTime(Map tvShow) {
+    int sum = tvShow['episode_run_time'].reduce((a, b) => a + b);
     var d = Duration(minutes: sum);
     List<String> parts = d.toString().split(':');
     return '${parts[0]}h ${parts[1].padLeft(2, '0')}m';
@@ -121,7 +111,7 @@ class _FavoritesState extends State<Favorites> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(13),
                 child: Image.network(
-                  'https://image.tmdb.org/t/p/w500' + tvShows[itemIndex].poster_path,
+                  'https://image.tmdb.org/t/p/w500' + tvShows[itemIndex]['poster_path'],
                   fit: BoxFit.cover,
                 ),
               ),
@@ -134,7 +124,7 @@ class _FavoritesState extends State<Favorites> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  tvShows[itemIndex].name,
+                  tvShows[itemIndex]['name'],
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
@@ -144,14 +134,14 @@ class _FavoritesState extends State<Favorites> {
                 Row(
                   children: [
                     RatingBarIndicator(
-                      rating: tvShows[itemIndex].vote_average,
+                      rating: tvShows[itemIndex]['vote_average'],
                       itemBuilder: (ctx, idx) => const Icon(Icons.star, color: Colors.amber),
                       itemCount: 5,
                       itemSize: 20,
                       unratedColor: Colors.amber.withAlpha(50),
                     ),
                     const SizedBox(width: 5),
-                    Text(tvShows[itemIndex].vote_average.toString()),
+                    Text(tvShows[itemIndex]['vote_average'].toString()),
                   ],
                 ),
                 SizedBox(
@@ -159,7 +149,7 @@ class _FavoritesState extends State<Favorites> {
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     shrinkWrap: true,
-                    itemCount: tvShows[itemIndex].genres.length,
+                    itemCount: tvShows[itemIndex]['genres'].length,
                     itemBuilder: (BuildContext ctx, int genreIndex) {
                       return Container(
                         margin: const EdgeInsets.symmetric(vertical: 15),
@@ -167,7 +157,7 @@ class _FavoritesState extends State<Favorites> {
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.black54),
                         ),
-                        child: Text(tvShows[itemIndex].genres[genreIndex].name),
+                        child: Text(tvShows[itemIndex]['genres'][genreIndex]['name']),
                       );
                     },
                   ),
@@ -188,7 +178,7 @@ class _FavoritesState extends State<Favorites> {
   }
 
   Future<void> _onDelete(int itemIndex) async {
-    final int id = tvShows[itemIndex].id;
+    final int id = tvShows[itemIndex]['id'];
     setState(() {
       tvShows.removeAt(itemIndex);
     });

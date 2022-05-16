@@ -1,13 +1,9 @@
-import 'dart:convert';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:tmdb_api/tmdb_api.dart';
 
 import '../local_storage_manager.dart';
-import '../models/home/cast.dart';
-import '../models/home/crew.dart';
-import '../models/home/tv_show.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -20,11 +16,11 @@ class _HomeState extends State<Home> {
   Icon searchIcon = const Icon(Icons.search);
   Widget searchBar = const Text('TV Shows');
   bool loadingShows = false;
-  List<TvShow> tvShows = <TvShow>[];
+  List tvShows = [];
   List<int> favoriteIds = <int>[];
   bool loadingCredit = false;
-  List<Cast> casts = <Cast>[];
-  List<Crew> crews = <Crew>[];
+  List casts = [];
+  List crews = [];
 
   @override
   void initState() {
@@ -98,7 +94,7 @@ class _HomeState extends State<Home> {
           child: Stack(
             children: <Widget>[
               Image.network(
-                'https://image.tmdb.org/t/p/w500' + tvShows[itemIndex].poster_path,
+                'https://image.tmdb.org/t/p/w500' + tvShows[itemIndex]['poster_path'],
                 fit: BoxFit.cover,
                 width: 206,
               ),
@@ -111,7 +107,7 @@ class _HomeState extends State<Home> {
                     TextButton.icon(
                       onPressed: null,
                       icon: const Icon(Icons.star, color: Colors.white),
-                      label: Text(tvShows[itemIndex].vote_average.toString()),
+                      label: Text(tvShows[itemIndex]['vote_average'].toString()),
                       style: ButtonStyle(
                         backgroundColor: MaterialStateProperty.all(Colors.black.withOpacity(0.19)),
                         shape: MaterialStateProperty.all(const StadiumBorder()),
@@ -127,7 +123,7 @@ class _HomeState extends State<Home> {
                         backgroundColor: Colors.black.withOpacity(0.19),
                         shape: const CircleBorder(),
                       ),
-                      child: favoriteIds.contains(tvShows[itemIndex].id) ? const Icon(Icons.favorite, color: Colors.white) : const Icon(Icons.favorite_outline, color: Colors.white),
+                      child: favoriteIds.contains(tvShows[itemIndex]['id']) ? const Icon(Icons.favorite, color: Colors.white) : const Icon(Icons.favorite_outline, color: Colors.white),
                     ),
                   ],
                 ),
@@ -162,16 +158,16 @@ class _HomeState extends State<Home> {
             width: 77,
             child: Column(
               children: [
-                if (casts[index].profile_path != null)
+                if (casts[index]['profile_path'] != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(15),
-                    child: Image.network('https://image.tmdb.org/t/p/w300${casts[index].profile_path}', width: 77, height: 77, fit: BoxFit.cover),
+                    child: Image.network('https://image.tmdb.org/t/p/w300${casts[index]['profile_path']}', width: 77, height: 77, fit: BoxFit.cover),
                   ),
-                if (casts[index].profile_path == null) const Icon(Icons.person, size: 77),
+                if (casts[index]['profile_path'] == null) const Icon(Icons.person, size: 77),
                 Container(
                   margin: const EdgeInsets.only(top: 13),
                   child: Text(
-                    casts[index].name,
+                    casts[index]['name'],
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.fade,
                     style: const TextStyle(fontSize: 12),
@@ -199,16 +195,16 @@ class _HomeState extends State<Home> {
             width: 77,
             child: Column(
               children: [
-                if (crews[index].profile_path != null)
+                if (crews[index]['profile_path'] != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(15),
-                    child: Image.network('https://image.tmdb.org/t/p/w300${crews[index].profile_path}', width: 77, height: 77, fit: BoxFit.cover),
+                    child: Image.network('https://image.tmdb.org/t/p/w300${crews[index]['profile_path']}', width: 77, height: 77, fit: BoxFit.cover),
                   ),
-                if (crews[index].profile_path == null) const Icon(Icons.person, size: 77),
+                if (crews[index]['profile_path'] == null) const Icon(Icons.person, size: 77),
                 Container(
                   margin: const EdgeInsets.only(top: 13),
                   child: Text(
-                    crews[index].name,
+                    crews[index]['name'],
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.fade,
                     style: const TextStyle(fontSize: 12),
@@ -232,23 +228,13 @@ class _HomeState extends State<Home> {
     setState(() {
       favoriteIds = favorites;
     });
-    final queryParams = {
-      'api_key': dotenv.env['API_KEY'],
-      'include_adult': 'false',
-      'query': searchText.isEmpty ? 'a' : searchText,
-    };
-    final uri = Uri.https('api.themoviedb.org', '3/search/tv', queryParams);
-    final response = await http.get(uri);
-    if (response.statusCode == 200) {
-      Map<String, dynamic> map = jsonDecode(response.body);
-      tvShows = (map['results'] as List).map((data) => TvShow.fromJson(data)).toList();
-      setState(() {
-        loadingShows = false;
-      });
-      await _onPageChanged(0, CarouselPageChangedReason.manual);
-    } else {
-      throw Exception('Failed to load TV shows');
-    }
+    final tmdb = TMDB(ApiKeys(dotenv.env['API_KEY']!, dotenv.env['ACCESS_TOKEN']!));
+    Map<dynamic, dynamic> map = await tmdb.v3.search.queryTvShows('a');
+    tvShows = (map['results'] as List);
+    setState(() {
+      loadingShows = false;
+    });
+    await _onPageChanged(0, CarouselPageChangedReason.manual);
   }
 
   void _onTitleAction() {
@@ -287,7 +273,7 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> _onFavorite(int itemIndex) async {
-    int id = tvShows[itemIndex].id;
+    int id = tvShows[itemIndex]['id'];
     setState(() {
       if (favoriteIds.contains(id)) {
         favoriteIds.remove(id);
@@ -302,20 +288,12 @@ class _HomeState extends State<Home> {
     setState(() {
       loadingCredit = true;
     });
-    final queryParams = {
-      'api_key': dotenv.env['API_KEY'],
-    };
-    final uri = Uri.https('api.themoviedb.org', '3/tv/${tvShows[index].id}/credits', queryParams);
-    final response = await http.get(uri);
-    if (response.statusCode == 200) {
-      Map<String, dynamic> map = jsonDecode(response.body);
-      casts = (map['cast'] as List).map((data) => Cast.fromJson(data)).toList();
-      crews = (map['crew'] as List).map((data) => Crew.fromJson(data)).toList();
-      setState(() {
-        loadingCredit = false;
-      });
-    } else {
-      throw Exception('Failed to load credit of TV show');
-    }
+    final tmdb = TMDB(ApiKeys(dotenv.env['API_KEY']!, dotenv.env['ACCESS_TOKEN']!));
+    Map<dynamic, dynamic> map = await tmdb.v3.tv.getCredits(tvShows[index]['id']);
+    casts = (map['cast'] as List);
+    crews = (map['crew'] as List);
+    setState(() {
+      loadingCredit = false;
+    });
   }
 }
