@@ -17,11 +17,13 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   Icon searchIcon = const Icon(Icons.search);
   Widget searchBar = const Text('TV Shows');
-  bool loadingShows = false;
+  bool loadingList = false;
   List tvShows = [];
-  bool loadingCredit = false;
-  List casts = [];
-  List crews = [];
+  bool loadingDetails = false;
+  String currentName = '';
+  String currentOverview = '';
+  List currentCasts = [];
+  List currentCrews = [];
 
   @override
   void initState() {
@@ -49,7 +51,7 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildBody(BuildContext context) {
-    if (loadingShows) {
+    if (loadingList) {
       return const Center(
         child: CircularProgressIndicator(),
       );
@@ -61,6 +63,22 @@ class _HomeState extends State<Home> {
           Container(
             margin: const EdgeInsets.symmetric(vertical: 13),
             child: _buildShowsCarousel(),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 13, horizontal: 29),
+            child: Text(
+              currentName,
+              textAlign: TextAlign.left,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 13, horizontal: 29),
+            child: Text(
+              currentOverview,
+              textAlign: TextAlign.left,
+              style: const TextStyle(fontSize: 14),
+            ),
           ),
           Container(
             margin: const EdgeInsets.symmetric(vertical: 13, horizontal: 29),
@@ -93,7 +111,7 @@ class _HomeState extends State<Home> {
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(22)),
           child: Stack(
-            children: <Widget>[
+            children: [
               Image.network(
                 'https://image.tmdb.org/t/p/w500' + tvShows[itemIndex]['poster_path'],
                 fit: BoxFit.cover,
@@ -153,22 +171,22 @@ class _HomeState extends State<Home> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         shrinkWrap: true,
-        itemCount: casts.length,
+        itemCount: currentCasts.length,
         itemBuilder: (BuildContext context, int index) {
           return SizedBox(
             width: 77,
             child: Column(
               children: [
-                if (casts[index]['profile_path'] != null)
+                if (currentCasts[index]['profile_path'] != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(15),
-                    child: Image.network('https://image.tmdb.org/t/p/w300${casts[index]['profile_path']}', width: 77, height: 77, fit: BoxFit.cover),
+                    child: Image.network('https://image.tmdb.org/t/p/w300${currentCasts[index]['profile_path']}', width: 77, height: 77, fit: BoxFit.cover),
                   ),
-                if (casts[index]['profile_path'] == null) const Icon(Icons.person, size: 77),
+                if (currentCasts[index]['profile_path'] == null) const Icon(Icons.person, size: 77),
                 Container(
                   margin: const EdgeInsets.only(top: 13),
                   child: Text(
-                    casts[index]['name'],
+                    currentCasts[index]['name'],
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.fade,
                     style: const TextStyle(fontSize: 12),
@@ -190,22 +208,22 @@ class _HomeState extends State<Home> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         shrinkWrap: true,
-        itemCount: crews.length,
+        itemCount: currentCrews.length,
         itemBuilder: (BuildContext context, int index) {
           return SizedBox(
             width: 77,
             child: Column(
               children: [
-                if (crews[index]['profile_path'] != null)
+                if (currentCrews[index]['profile_path'] != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(15),
-                    child: Image.network('https://image.tmdb.org/t/p/w300${crews[index]['profile_path']}', width: 77, height: 77, fit: BoxFit.cover),
+                    child: Image.network('https://image.tmdb.org/t/p/w300${currentCrews[index]['profile_path']}', width: 77, height: 77, fit: BoxFit.cover),
                   ),
-                if (crews[index]['profile_path'] == null) const Icon(Icons.person, size: 77),
+                if (currentCrews[index]['profile_path'] == null) const Icon(Icons.person, size: 77),
                 Container(
                   margin: const EdgeInsets.only(top: 13),
                   child: Text(
-                    crews[index]['name'],
+                    currentCrews[index]['name'],
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.fade,
                     style: const TextStyle(fontSize: 12),
@@ -223,13 +241,13 @@ class _HomeState extends State<Home> {
 
   Future<void> _fetchData(String searchText) async {
     setState(() {
-      loadingShows = true;
+      loadingList = true;
     });
     final tmdb = TMDB(ApiKeys(dotenv.env['API_KEY']!, dotenv.env['ACCESS_TOKEN']!));
     Map<dynamic, dynamic> map = await tmdb.v3.search.queryTvShows('a');
     tvShows = (map['results'] as List);
     setState(() {
-      loadingShows = false;
+      loadingList = false;
     });
     await _onPageChanged(0, CarouselPageChangedReason.manual);
   }
@@ -281,14 +299,16 @@ class _HomeState extends State<Home> {
 
   Future<void> _onPageChanged(int index, CarouselPageChangedReason reason) async {
     setState(() {
-      loadingCredit = true;
+      loadingDetails = true;
+      currentName = tvShows[index]['name'];
+      currentOverview = tvShows[index]['overview'];
     });
     final tmdb = TMDB(ApiKeys(dotenv.env['API_KEY']!, dotenv.env['ACCESS_TOKEN']!));
     Map<dynamic, dynamic> map = await tmdb.v3.tv.getCredits(tvShows[index]['id']);
-    casts = (map['cast'] as List);
-    crews = (map['crew'] as List);
+    currentCasts = (map['cast'] as List);
+    currentCrews = (map['crew'] as List);
     setState(() {
-      loadingCredit = false;
+      loadingDetails = false;
     });
   }
 }
