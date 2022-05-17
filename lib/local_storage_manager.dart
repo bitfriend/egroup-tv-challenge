@@ -30,6 +30,11 @@ class LocalStorageManager {
 
   Future<void> writeFavorites(List<int> ids) async {
     await _storage.ready;
-    return _storage.setItem('favorites', ids);
+    // prevent unhandled exception
+    try {
+      await _storage.setItem('favorites', ids);
+    } catch (e) {
+      print(e);
+    }
   }
 }
