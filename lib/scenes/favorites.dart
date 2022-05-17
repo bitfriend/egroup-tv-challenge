@@ -51,7 +51,9 @@ class _FavoritesState extends State<Favorites> {
             endActionPane: ActionPane(
               motion: const ScrollMotion(),
               dismissible: DismissiblePane(
-                onDismissed: () {},
+                onDismissed: () {
+                  _onDelete(context, itemIndex);
+                },
               ),
               children: [
                 SlidableAction(
@@ -184,6 +186,10 @@ class _FavoritesState extends State<Favorites> {
   }
 
   Future<void> _onDelete(BuildContext context, int itemIndex) async {
+    if (itemIndex >= tvShows.length) {
+      // prevent double click
+      return;
+    }
     final int id = tvShows[itemIndex]['id'];
     setState(() {
       tvShows.removeAt(itemIndex);
