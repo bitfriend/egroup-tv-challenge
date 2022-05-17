@@ -39,3 +39,5 @@ You can find the built `HTML`/`JS`/`CSS` in `/build/web` directory of this proje
 Assign the full path of this directory to the specific port (ex: `9097`) in `httpd-vhosts.conf` of `XAMPP`.
 
 Open that port of localhost via the web browser to see the living homepage.
+
+![Demo](web.gif "web demo")

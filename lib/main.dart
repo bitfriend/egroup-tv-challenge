@@ -28,7 +28,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  int _currentTabIndex = 0;
+  int currentTabIndex = 0;
 
   @override
   void initState() {
@@ -57,7 +57,7 @@ class _MyAppState extends State<MyApp> {
       home: Scaffold(
         body: SafeArea(
           child: IndexedStack(
-            index: _currentTabIndex,
+            index: currentTabIndex,
             children: const [
               Home(),
               Favorites(),
@@ -65,7 +65,7 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
         bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _currentTabIndex,
+          currentIndex: currentTabIndex,
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home),
@@ -78,7 +78,7 @@ class _MyAppState extends State<MyApp> {
           ],
           onTap: (position) {
             setState(() {
-              _currentTabIndex = position;
+              currentTabIndex = position;
             });
           },
         ),
