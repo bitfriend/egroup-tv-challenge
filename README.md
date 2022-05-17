@@ -15,7 +15,7 @@ For help getting started with Flutter, view our
 [online documentation](https://flutter.dev/docs), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
 
-## Demos
+## Mobile
 
 ### Android
 
@@ -24,3 +24,18 @@ samples, guidance on mobile development, and a full API reference.
 ### iOS
 
 ![Demo](ios.gif "ios demo")
+
+## Web Build
+
+Run the following commands:
+
+```
+flutter pub global activate webdev
+flutter build web
+```
+
+You can find the built `HTML`/`JS`/`CSS` in `/build/web` directory of this project.
+
+Assign the full path of this directory to the specific port (ex: `9097`) in `httpd-vhosts.conf` of `XAMPP`.
+
+Open that port of localhost via the web browser to see the living homepage.
